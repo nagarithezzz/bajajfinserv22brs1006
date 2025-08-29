@@ -16,7 +16,7 @@ public class BajajFinservHealthApplication {
     public static void main(String[] args) {
         SpringApplication.run(BajajFinservHealthApplication.class, args);
     }
-     @Bean
+    @Bean
     CommandLineRunner run(HealthService healthService) {
         return args -> healthService.registerWebhook();
     }

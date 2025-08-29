@@ -30,7 +30,7 @@ public class HealthService {
         Map<String, String> body = new HashMap<>();
         body.put("name", "Naga Rithesh");
         body.put("regNo", "22BRS1006");
-        body.put("email", "naga.rithesh@gmail.com");
+        body.put("email", "naga.rithesh2022@vitstudent.ac.in");
         
         ResponseEntity<Map> response = restTemplate.postForEntity(url, body, Map.class);
 
