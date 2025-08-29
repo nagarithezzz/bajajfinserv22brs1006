@@ -28,9 +28,9 @@ public class HealthService {
         String url = "https://bfhldevapigw.healthrx.co.in/hiring/generateWebhook/JAVA";
 
         Map<String, String> body = new HashMap<>();
-        body.put("name", "ABC");
-        body.put("regNo", "22BRS1406");
-        body.put("email", "abc@gmail.com");
+        body.put("name", "Naga Rithesh");
+        body.put("regNo", "22BRS1006");
+        body.put("email", "naga.rithesh@gmail.com");
         
         ResponseEntity<Map> response = restTemplate.postForEntity(url, body, Map.class);
 
