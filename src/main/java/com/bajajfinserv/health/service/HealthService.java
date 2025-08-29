@@ -11,6 +11,7 @@ import java.time.format.DateTimeFormatter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpEntity;
+import org.springframework.web.client.RestClientResponseException;
 
 @Service
 @Slf4j
@@ -25,25 +26,48 @@ public class HealthService {
     }
 
     public void registerWebhook() {
-        String url = "https://bfhldevapigw.healthrx.co.in/hiring/generateWebhook/JAVA";
-
-        Map<String, String> body = new HashMap<>();
-        body.put("name", "Naga Rithesh");
-        body.put("regNo", "22BRS1006");
-        body.put("email", "naga.rithesh2022@vitstudent.ac.in");
-        
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, body, Map.class);
-
-        String webhookUrl = (String) response.getBody().get("webhook");
-        String accessToken = (String) response.getBody().get("accessToken");
-        
-        if (webhookUrl == null || accessToken == null) {
-            log.error("Missing webhook URL or access token in response");
+        Map<String, String> webhookInfo = generateWebhook();
+        if (webhookInfo == null) {
             return;
         }
-        
         String sqlQuery = solveSQL();
-        submitSQL(webhookUrl, accessToken, sqlQuery);
+        String webhookUrl = webhookInfo.get("webhook");
+        String token = webhookInfo.get("accessToken");
+        submitSQLSpec(webhookUrl, token, sqlQuery);
+    }
+
+    private Map<String, String> generateWebhook() {
+        try {
+            String url = "https://bfhldevapigw.healthrx.co.in/hiring/generateWebhook/JAVA";
+
+            Map<String, String> body = new HashMap<>();
+            body.put("name", "Naga Rithesh");
+            body.put("regNo", "22BRS1006");
+            body.put("email", "naga.rithesh2022@vitstudent.ac.in");
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, body, Map.class);
+            Map<String, Object> respBody = response.getBody();
+            if (respBody == null) {
+                log.error("Empty response from generateWebhook");
+                return null;
+            }
+            String webhookUrl = (String) respBody.get("webhook");
+            String accessToken = (String) respBody.get("accessToken");
+            if (webhookUrl == null || accessToken == null) {
+                log.error("Missing webhook URL or access token in response");
+                return null;
+            }
+            Map<String, String> result = new HashMap<>();
+            result.put("webhook", webhookUrl);
+            result.put("accessToken", accessToken);
+            return result;
+        } catch (RestClientResponseException e) {
+            log.error("generateWebhook failed ({}): {}", e.getRawStatusCode(), e.getResponseBodyAsString());
+            return null;
+        } catch (Exception e) {
+            log.error("generateWebhook error: {}", e.getMessage(), e);
+            return null;
+        }
     }
 
     private String solveSQL() {
@@ -68,20 +92,24 @@ public class HealthService {
         return sql.toString();
     }
 
-    private void submitSQL(String webhookUrl, String token, String sqlQuery) {
+    private void submitSQLSpec(String webhookUrl, String token, String sqlQuery) {
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.add("Authorization", token);
 
             Map<String, String> body = new HashMap<>();
             body.put("finalQuery", sqlQuery);
 
             HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(webhookUrl, entity, String.class);
-            log.info("SQL submission successful: {}", response.getBody());
+            log.info("SQL submission (spec) successful ({}): {}", response.getStatusCode(), response.getBody());
+        } catch (RestClientResponseException e) {
+            log.error("SQL submission (spec) failed ({}): {}", e.getRawStatusCode(), e.getResponseBodyAsString());
+            throw e;
         } catch (Exception e) {
-            log.error("Error submitting SQL: {}", e.getMessage(), e);
+            log.error("SQL submission (spec) error: {}", e.getMessage(), e);
+            throw e;
         }
     }
 
